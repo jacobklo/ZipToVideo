@@ -1,5 +1,7 @@
 package net.jacoblo.BMP;
 
+import java.awt.Image;
+import java.awt.image.PixelGrabber;
 import java.util.Arrays;
 
 public class BMPFile {
@@ -12,6 +14,15 @@ public class BMPFile {
     public short bfReserved1 = 1;
     public short bfReserved2 = 1;
     public int bfOffBits = BITMAP_FILE_HEADER_SIZE + BITMAP_INFO_HEADER_SIZE;
+    
+    public boolean calculateImageSize( int pxWidth, int pxHeight ) {
+      if (pxWidth < 0 || pxHeight < 0) return false;
+      
+      int pad = (4 - ((pxWidth * 3) % 4)) * pxHeight;
+      int biSizeImage = ((pxWidth * pxHeight) * 3) + pad;
+      bfSize = biSizeImage + BITMAP_FILE_HEADER_SIZE + BITMAP_INFO_HEADER_SIZE;
+      return true;
+    }
     
     public byte[] toByteArray() {
       byte[] result = new byte[BITMAP_FILE_HEADER_SIZE];
@@ -62,6 +73,16 @@ public class BMPFile {
     public int biYPelsPerMeter = 0x0;
     public int biClrUsed = 0;
     public int biClrImportant = 0;
+    
+    public boolean calculateImageSize( int pxWidth, int pxHeight ) {
+      if (pxWidth < 0 || pxHeight < 0) return false;
+      
+      int pad = (4 - ((pxWidth * 3) % 4)) * pxHeight;
+      biSizeImage = ((pxWidth * pxHeight) * 3) + pad;
+      biWidth = pxWidth;
+      biHeight = pxHeight;
+      return true;
+    }
     
     public byte[] toByteArray() {
       byte[] result = new byte[BITMAP_INFO_HEADER_SIZE];
@@ -122,5 +143,38 @@ public class BMPFile {
       
       return true;
     }
+  }
+  
+  public static class Bitmap {
+    public byte[] m_Bitmap;
+    public int m_Width;
+    public int m_Height;
+    
+    public Bitmap(Image image, int pxWidth, int pxHeight) {
+      convertFromImage(image , pxWidth , pxHeight );
+    }
+    public byte[] convertFromImage(Image image, int pxWidth, int pxHeight ) {
+      return toByteArray(image , pxWidth , pxHeight );
+    }
+    public byte[] toByteArray() { return m_Bitmap; }
+    public byte[] toByteArray(Image image, int pxWidth, int pxHeight ) {
+      if (image == null || pxWidth <= 0 || pxHeight <= 0 ) return new byte[0];
+      
+      int[] bitmap = new int[pxWidth * pxHeight];
+      PixelGrabber pixelgrabber = new PixelGrabber(image, 0, 0, pxWidth,pxHeight, bitmap, 0, pxWidth);
+      
+      try {
+        pixelgrabber.grabPixels();
+      } catch (InterruptedException e) {
+        return new byte[0];
+      }
+      
+      m_Bitmap = ByteUtil.toByta(bitmap);
+      m_Width = pxWidth;
+      m_Height = pxHeight;
+      return m_Bitmap;
+    }
+    
+    
   }
 }
