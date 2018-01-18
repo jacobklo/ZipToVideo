@@ -2,6 +2,9 @@ package net.jacoblo.BMP;
 
 import java.awt.Image;
 import java.awt.image.PixelGrabber;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.util.Arrays;
 
 public class BMPFile {
@@ -146,19 +149,57 @@ public class BMPFile {
   }
   
   public static class Bitmap {
-    public byte[] m_Bitmap;
+    // m_Pixels stored image from Pixel Grabber
+    public int[] m_Pixels;
     public int m_Width;
     public int m_Height;
     
     public Bitmap(Image image, int pxWidth, int pxHeight) {
       convertFromImage(image , pxWidth , pxHeight );
     }
-    public byte[] convertFromImage(Image image, int pxWidth, int pxHeight ) {
-      return toByteArray(image , pxWidth , pxHeight );
+    
+    public byte[] toByteArray() {
+      return convertPixelsToBitmapFormat();
     }
-    public byte[] toByteArray() { return m_Bitmap; }
-    public byte[] toByteArray(Image image, int pxWidth, int pxHeight ) {
-      if (image == null || pxWidth <= 0 || pxHeight <= 0 ) return new byte[0];
+    
+    // 1. bitmap format for lines is inverted, from end to fonrt line
+    // 2. each scan line must be padded to an even 4-bytes boundary
+    public byte[] convertPixelsToBitmapFormat() {
+      if (m_Pixels == null || m_Width <= 0 || m_Height <= 0)  return new byte[0];
+      
+      // each scan line must be padded to an even 4-bytes boundary
+      int eachLineByteSize = (m_Width * 3) / 4 * 4  + ( ( 4 - ( (m_Width * 3) ) % 4 ) == 4 ? 0 : 4 );
+      int totalByteSize = eachLineByteSize * m_Height;
+      
+      byte[] result = new byte[totalByteSize];
+      
+      for (int i = m_Height - 1, k = 0; i >= 0 ; i--, k++ ) {
+        for (int j = 0 ; j < m_Width ; j++ ) {
+          
+          int currentPixelpointer = i * m_Width + j;
+          int currentPixelValue = m_Pixels[currentPixelpointer];
+          
+          int byteLocationPointer = k * m_Width * 3 + (j * 3 );
+          result[byteLocationPointer]   = (byte) (currentPixelValue & 0xFF);
+          result[byteLocationPointer+1] = (byte) ( ( currentPixelValue >> 8 ) & 0xFF);
+          result[byteLocationPointer+2] = (byte) ( ( currentPixelValue >> 16 ) & 0xFF);
+          
+        }
+      }
+      
+      return result;
+    }
+    
+    public boolean toObject(byte[] bytes) {
+      throw new IllegalArgumentException("You do not need this Bitmap helper class, if you already have bitmap formatted pixel bytes");
+    }
+    
+    // The more suitable one is input a Image object, and convert it to bitmap formatted pixel bytes
+    public boolean toObject(Image image, int pxWidth, int pxHeight) {
+      return convertFromImage(image, pxWidth, pxHeight);
+    }
+    public boolean convertFromImage(Image image, int pxWidth, int pxHeight ) {
+      if (image == null || pxWidth <= 0 || pxHeight <= 0 ) return false;
       
       int[] bitmap = new int[pxWidth * pxHeight];
       PixelGrabber pixelgrabber = new PixelGrabber(image, 0, 0, pxWidth,pxHeight, bitmap, 0, pxWidth);
@@ -166,15 +207,14 @@ public class BMPFile {
       try {
         pixelgrabber.grabPixels();
       } catch (InterruptedException e) {
-        return new byte[0];
+        return false;
       }
       
-      m_Bitmap = ByteUtil.toByta(bitmap);
+      m_Pixels = bitmap;
       m_Width = pxWidth;
       m_Height = pxHeight;
-      return m_Bitmap;
+      return true;
     }
-    
     
   }
 }

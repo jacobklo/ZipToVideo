@@ -1,7 +1,11 @@
 package net.jacoblo.BMP;
 
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
+
+import javax.imageio.ImageIO;
 
 public class Main {
   public static void main(String[] args) {
@@ -23,12 +27,37 @@ public class Main {
 //    System.out.println();
 //    System.out.println("" + tb.bfSize + " " + tb.bfReserved1 + " " + tb.bfReserved2 + " " + tb.bfOffBits);
     
-    BufferedImage bi = new BufferedImage(2,2,BufferedImage.TYPE_3BYTE_BGR);
-    BMPFile.Bitmap bp = new BMPFile.Bitmap(bi,2,2);
+//    BufferedImage bi;
+//    try {
+//      bi = ImageIO.read(new File("C:\\Users\\lok1\\Desktop\\1px.bmp"));
+//      BMPFile.Bitmap bp = new BMPFile.Bitmap(bi,2,2);
+//      
+//      byte[] result = bp.m_Bitmap;
+//      System.out.println(result.length);
+//      for (byte b : result) {
+//        String s = String.format("%02X", b);
+//        System.out.print(s + " ");
+//      }
+//    } catch (IOException e) {
+//      // TODO Auto-generated catch block
+//      e.printStackTrace();
+//    }
+//    
     
-    byte[] result = bp.m_Bitmap;
-    System.out.println(result.length);
-    for (byte b : result) {
+    int[] tp = { 150000, 200000 };
+    byte[] orig = ByteUtil.toByta(tp);
+    for (byte b : orig) {
+      String s = String.format("%02X", b);
+      System.out.print(s + " ");
+    }
+    System.out.println("");
+    
+    BMPFile.Bitmap bp = new BMPFile.Bitmap(null, 0, 0);
+    bp.m_Height = 1;
+    bp.m_Width = 2;
+    bp.m_Pixels = tp;
+    byte[] out = bp.convertPixelsToBitmapFormat();
+    for (byte b : out) {
       String s = String.format("%02X", b);
       System.out.print(s + " ");
     }
