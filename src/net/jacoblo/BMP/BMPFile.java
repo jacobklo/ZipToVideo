@@ -2,20 +2,77 @@ package net.jacoblo.BMP;
 
 import java.awt.Image;
 import java.awt.image.PixelGrabber;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.Arrays;
 
 public class BMPFile {
   private final static int BITMAP_FILE_HEADER_SIZE = 14;
   private final static int BITMAP_INFO_HEADER_SIZE = 40;
   
+  private TagBitmapFileHeader m_FileHeader;
+  private TagBitmapInfoHeader m_InfoHeader;
+  private Bitmap m_Bitmap;
+  
+  public boolean isEmpty() {
+    return m_Bitmap == null || m_Bitmap.m_Height <= 0 || m_Bitmap.m_Width <= 0 || m_Bitmap.m_Pixels == null || m_FileHeader == null || m_FileHeader.bfSize <= 0 || m_InfoHeader == null ;
+  }
+  
+  public byte[] toByteArray() {
+    if (isEmpty()) {
+      return new byte[0];
+    }
+    
+    // if false, header calculation has went wrong, abort
+    if (! (m_FileHeader.calculateImageSize(m_Bitmap.m_Width, m_Bitmap.m_Height) && 
+    m_InfoHeader.calculateImageSize(m_Bitmap.m_Width, m_Bitmap.m_Height) ) )  {
+      return new byte[0];
+    }
+    
+    byte[] result = new byte[m_FileHeader.bfSize];
+    int position = 0;
+    System.arraycopy(m_FileHeader.toByteArray(), 0, result, position, BITMAP_FILE_HEADER_SIZE);
+    position += BITMAP_FILE_HEADER_SIZE;
+    System.arraycopy(m_InfoHeader.toByteArray(), 0, result, position, BITMAP_INFO_HEADER_SIZE);
+    position += BITMAP_INFO_HEADER_SIZE;
+    System.arraycopy(m_Bitmap.toByteArray(), 0, result, position, m_Bitmap.getTotalByteSize(m_Bitmap.m_Width, m_Bitmap.m_Height));
+    
+    return result;
+  }
+  
+  public boolean toObject() {
+    // TODO
+    return false;
+  }
+  
+  public boolean saveBitmap(String pathToSave) {
+    if (pathToSave == null || isEmpty())  return false;
+    
+    FileOutputStream fos;
+    try {
+      fos = new FileOutputStream(pathToSave);
+      fos.write(toByteArray());
+      fos.flush();
+    } catch ( IOException e) {
+      return false;
+    }
+    if (fos != null) {
+      try {
+        fos.close();
+      } catch (IOException e) {}
+    }
+    return true;
+  }
+  
+  
   public static class TagBitmapFileHeader {
     public byte[] bfType = {'B', 'M'};
-    public int bfSize = 1;
-    public short bfReserved1 = 1;
-    public short bfReserved2 = 1;
+    public int bfSize = 0;
+    public short bfReserved1 = 0;
+    public short bfReserved2 = 0;
     public int bfOffBits = BITMAP_FILE_HEADER_SIZE + BITMAP_INFO_HEADER_SIZE;
     
     public boolean calculateImageSize( int pxWidth, int pxHeight ) {
@@ -167,11 +224,7 @@ public class BMPFile {
     public byte[] convertPixelsToBitmapFormat() {
       if (m_Pixels == null || m_Width <= 0 || m_Height <= 0)  return new byte[0];
       
-      // each scan line must be padded to an even 4-bytes boundary
-      int eachLineByteSize = (m_Width * 3) / 4 * 4  + ( ( 4 - ( (m_Width * 3) ) % 4 ) == 4 ? 0 : 4 );
-      int totalByteSize = eachLineByteSize * m_Height;
-      
-      byte[] result = new byte[totalByteSize];
+      byte[] result = new byte[getTotalByteSize(m_Width, m_Height)];
       
       for (int i = m_Height - 1, k = 0; i >= 0 ; i--, k++ ) {
         for (int j = 0 ; j < m_Width ; j++ ) {
@@ -188,6 +241,15 @@ public class BMPFile {
       }
       
       return result;
+    }
+    
+    // each scan line must be padded to an even 4-bytes boundary
+    public int getTotalByteSize(int width, int height ) {
+      if (width <= 0 || height <= 0 ) return 0;
+      
+      int eachLineByteSize = (m_Width * 3) / 4 * 4  + ( ( 4 - ( (m_Width * 3) ) % 4 ) == 4 ? 0 : 4 );
+      int totalByteSize = eachLineByteSize * m_Height;
+      return totalByteSize;
     }
     
     public boolean toObject(byte[] bytes) {
